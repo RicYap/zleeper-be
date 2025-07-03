@@ -1,7 +1,7 @@
-// config/config.go
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -31,40 +31,108 @@ type RedisConfig struct {
 }
 
 func LoadConfig() (*Config, error) {
-	err := godotenv.Load()
+	env := os.Getenv("APP_ENV")
+	if env == "" {
+		env = "development"
+	}
+
+	if env != "production" {
+		dotenvFile := ".env.development"
+		if err := godotenv.Load(dotenvFile); err != nil {
+			log.Printf("Warning: failed to load %s file (continuing with OS env)\n", dotenvFile)
+		}
+	}
+
+	cfg := &Config{}
+
+	var err error
+
+	cfg.ServerPort, err = getEnvRequired("SERVER_PORT")
 	if err != nil {
-		log.Println("Error loading .env file, using environment variables")
+		return nil, err
 	}
 
-	return &Config{
-		ServerPort: getEnv("SERVER_PORT", "8080"),
-		DBConfig: DBConfig{
-			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnv("DB_PORT", "3306"),
-			User:     getEnv("DB_USER", "root"),
-			Password: getEnv("DB_PASSWORD", ""),
-			DBName:   getEnv("DB_NAME", "product_management"),
-		},
-		RedisConfig: RedisConfig{
-			Host:     getEnv("REDIS_HOST", "localhost"),
-			Port:     getEnv("REDIS_PORT", "6379"),
-			Password: getEnv("REDIS_PASSWORD", ""),
-			DB:       getEnvAsInt("REDIS_DB", 0),
-		},
-	}, nil
+	cfg.DBConfig, err = loadDBConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	cfg.RedisConfig, err = loadRedisConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
 }
 
-func getEnv(key, defaultValue string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
+func loadDBConfig() (DBConfig, error) {
+	var cfg DBConfig
+	var err error
+
+	cfg.Host, err = getEnvRequired("DB_HOST")
+	if err != nil {
+		return DBConfig{}, err
 	}
-	return defaultValue
+
+	cfg.Port, err = getEnvRequired("DB_PORT")
+	if err != nil {
+		return DBConfig{}, err
+	}
+
+	cfg.User, err = getEnvRequired("DB_USER")
+	if err != nil {
+		return DBConfig{}, err
+	}
+
+	cfg.Password, err = getEnvRequired("DB_PASSWORD")
+	if err != nil {
+		return DBConfig{}, err
+	}
+
+	cfg.DBName, err = getEnvRequired("DB_NAME")
+	if err != nil {
+		return DBConfig{}, err
+	}
+
+	return cfg, nil
 }
 
-func getEnvAsInt(key string, defaultValue int) int {
-	valueStr := getEnv(key, "")
-	if value, err := strconv.Atoi(valueStr); err == nil {
-		return value
+func loadRedisConfig() (RedisConfig, error) {
+	var cfg RedisConfig
+	var err error
+
+	cfg.Host, err = getEnvRequired("REDIS_HOST")
+	if err != nil {
+		return RedisConfig{}, err
 	}
-	return defaultValue
+
+	cfg.Port, err = getEnvRequired("REDIS_PORT")
+	if err != nil {
+		return RedisConfig{}, err
+	}
+
+	cfg.Password, err = getEnvRequired("REDIS_PASSWORD")
+	if err != nil {
+		return RedisConfig{}, err
+	}
+
+	dbStr, err := getEnvRequired("REDIS_DB")
+	if err != nil {
+		return RedisConfig{}, err
+	}
+
+	cfg.DB, err = strconv.Atoi(dbStr)
+	if err != nil {
+		return RedisConfig{}, fmt.Errorf("REDIS_DB must be a number: %v", err)
+	}
+
+	return cfg, nil
+}
+
+func getEnvRequired(key string) (string, error) {
+	value, exists := os.LookupEnv(key)
+	if !exists {
+		return "", fmt.Errorf("missing required environment variable: %s", key)
+	}
+	return value, nil
 }

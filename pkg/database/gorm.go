@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"zleeper-be/internal/models" // Import your models package
+	"zleeper-be/internal/models"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -13,7 +13,6 @@ import (
 	"zleeper-be/config"
 )
 
-// InitDB initializes and returns a GORM database connection
 func InitDB(cfg config.DBConfig) (*gorm.DB, error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		cfg.User,
@@ -25,13 +24,12 @@ func InitDB(cfg config.DBConfig) (*gorm.DB, error) {
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		Logger:      logger.Default.LogMode(logger.Info),
-		PrepareStmt: true, // Enable prepared statements
+		PrepareStmt: true,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %v", err)
 	}
 
-	// Configure connection pool
 	sqlDB, err := db.DB()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database instance: %v", err)
@@ -45,7 +43,6 @@ func InitDB(cfg config.DBConfig) (*gorm.DB, error) {
 	return db, nil
 }
 
-// MigrateDB runs auto-migration for the given models
 func MigrateDB(db *gorm.DB) error {
 	err := db.AutoMigrate(
 		&models.OrderItem{},
