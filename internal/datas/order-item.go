@@ -19,10 +19,6 @@ type orderItemData struct {
 	db *gorm.DB
 }
 
-func NewOrderItemData(db *gorm.DB) OrderItemData {
-	return &orderItemData{db: db}
-}
-
 func (d *orderItemData) Create(ctx context.Context, orderItem *models.OrderItem) error {
 	return d.db.WithContext(ctx).Create(orderItem).Error
 }

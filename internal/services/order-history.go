@@ -15,6 +15,3 @@ type orderHistoryService struct {
 	cache cache.RedisCache
 }
 
-func NewOrderHistoryService(repo datas.OrderHistoryData, cache *cache.RedisCache) OrderHistoryService {
-	return &orderHistoryService{repo: repo, cache: *cache}
-}

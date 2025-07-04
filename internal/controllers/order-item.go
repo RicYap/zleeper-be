@@ -15,10 +15,6 @@ type OrderItemController struct {
 	service services.OrderItemService
 }
 
-func NewOrderItemController(service services.OrderItemService) *OrderItemController {
-	return &OrderItemController{service: service}
-}
-
 func (c *OrderItemController) Create(ctx echo.Context) error {
 	var orderItem models.OrderItem
 	if err := ctx.Bind(&orderItem); err != nil {

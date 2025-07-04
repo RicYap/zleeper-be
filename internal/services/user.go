@@ -15,6 +15,3 @@ type userService struct {
 	cache cache.RedisCache
 }
 
-func NewUserService(repo datas.UserData, cache *cache.RedisCache) UserService {
-	return &userService{repo: repo, cache: *cache}
-}

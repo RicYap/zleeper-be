@@ -22,10 +22,6 @@ type orderItemService struct {
 	cache cache.RedisCache
 }
 
-func NewOrderItemService(data datas.OrderItemData, cache *cache.RedisCache) OrderItemService {
-	return &orderItemService{data: data, cache: *cache}
-}
-
 func (s *orderItemService) Create(ctx context.Context, orderItem *models.OrderItem) error {
 	orderItem.CreatedAt = time.Now()
 	orderItem.UpdatedAt = time.Now()

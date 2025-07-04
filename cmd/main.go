@@ -45,22 +45,16 @@ func main() {
 	e.Use(middleware.Recover())
 	e.Use(utils.RequestLoggerMiddleware(logger))
 
-	orderItemData := datas.NewOrderItemData(db)
-	userData := datas.NewUserData(db)
-	orderHistoryData := datas.NewOrderHistoryData(db)
+	data := datas.NewDatas(db)
 
-	orderItemService := services.NewOrderItemService(orderItemData, redisClient)
-	userService := services.NewUserService(userData, redisClient)
-	orderHistoryService := services.NewOrderHistoryService(orderHistoryData, redisClient)
+	service := services.NewServices(data, redisClient)
 
-	orderItemController := controllers.NewOrderItemController(orderItemService)
-	userController := controllers.NewUserController(userService)
-	orderHistoryController := controllers.NewOrderHistoryController(orderHistoryService)
+	controller := controllers.NewControllers(service)
 
 	routes.NewRoutes(
-		orderItemController,
-		userController,
-		orderHistoryController,
+		controller.OrderItem,
+		controller.User,
+		controller.OrderHistory,
 	).RegisterRoutes(e)
 
 	e.Logger.Fatal(e.Start(":" + cfg.ServerPort))
