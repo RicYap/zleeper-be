@@ -23,10 +23,10 @@ func NewOrderItemService(data datas.OrderItemData, cache *cache.RedisCache) Orde
 	return &orderItemService{data: data, cache: *cache}
 }
 
-func NewOrderHistoryService(repo datas.OrderHistoryData, cache *cache.RedisCache) OrderHistoryService {
-	return &orderHistoryService{repo: repo, cache: *cache}
+func NewOrderHistoryService(data datas.OrderHistoryData, cache *cache.RedisCache) OrderHistoryService {
+	return &orderHistoryService{data: data, cache: *cache}
 }
 
-func NewUserService(repo datas.UserData, cache *cache.RedisCache) UserService {
-	return &userService{repo: repo, cache: *cache}
+func NewUserService(data datas.UserData, cache *cache.RedisCache) UserService {
+	return &userService{data: data, cache: *cache}
 }

@@ -35,12 +35,10 @@ func RequestLoggerMiddleware(logger *Logger) echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			start := time.Now()
 
-			// Log request details
 			logger.Printf("Request started: %s %s", c.Request().Method, c.Request().URL.Path)
 
 			err := next(c)
 
-			// Log response details
 			duration := time.Since(start)
 			logger.Printf("Request completed: %s %s | Status: %d | Duration: %v",
 				c.Request().Method, c.Request().URL.Path, c.Response().Status, duration)

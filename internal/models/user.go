@@ -1,7 +1,11 @@
 // internal/models/user.go
 package models
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type User struct {
 	ID         uint       `gorm:"primaryKey" json:"id"`
@@ -9,5 +13,5 @@ type User struct {
 	FirstOrder *time.Time `json:"first_order"`
 	CreatedAt  time.Time  `json:"created_at"`
 	UpdatedAt  time.Time  `json:"updated_at"`
-	DeletedAt  *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+	DeletedAt  gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 }

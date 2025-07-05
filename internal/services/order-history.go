@@ -11,7 +11,7 @@ type OrderHistoryService interface {
 }
 
 type orderHistoryService struct {
-	repo  datas.OrderHistoryData
+	data  datas.OrderHistoryData
 	cache cache.RedisCache
 }
 
