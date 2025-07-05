@@ -14,6 +14,7 @@ type UserService interface {
 	List(ctx context.Context, page int, limit int) ([]models.User, error)
 	Get(ctx context.Context, id uint) (models.User, error)
 	Delete(ctx context.Context, id uint) error
+	MarkFirstOrder(ctx context.Context, userID uint, orderTime time.Time) error
 }
 
 type userService struct {
@@ -30,7 +31,7 @@ func (s *userService) Create(ctx context.Context, user *models.User) error {
 		return err
 	}
 	
-	s.cache.Delete(ctx, "order_items:*")
+	s.cache.Delete(ctx, "users:*")
 	return nil
 }
 
@@ -42,13 +43,13 @@ func (s *userService) Update(ctx context.Context, user *models.User) error {
 		return err
 	}
 	
-	s.cache.Delete(ctx, "order_item:"+string(user.ID))
-	s.cache.Delete(ctx, "order_items:*")
+	s.cache.Delete(ctx, "user:"+string(rune(user.ID)))
+	s.cache.Delete(ctx, "users:*")
 	return nil
 }
 
 func (s *userService) List(ctx context.Context, page int, limit int) ([]models.User, error) {
-	cacheKey := "order_items:page:" + string(page) + ":limit:" + string(limit)
+	cacheKey := "users:page:" + string(rune(page)) + ":limit:" + string(rune(limit))
 	
 	var cachedItems []models.User
 	if err := s.cache.Get(ctx, cacheKey, &cachedItems); err == nil {
@@ -68,7 +69,7 @@ func (s *userService) List(ctx context.Context, page int, limit int) ([]models.U
 }
 
 func (s *userService) Get(ctx context.Context, id uint) (models.User, error) {
-	cacheKey := "order_item:" + string(id)
+	cacheKey := "user:" + string(rune(id))
 	
 	var cachedItem models.User
 	if err := s.cache.Get(ctx, cacheKey, &cachedItem); err == nil {
@@ -91,7 +92,24 @@ func (s *userService) Delete(ctx context.Context, id uint) error {
 		return err
 	}
 	
-	s.cache.Delete(ctx, "order_item:"+string(id))
-	s.cache.Delete(ctx, "order_items:*")
+	s.cache.Delete(ctx, "user:"+string(rune(id)))
+	s.cache.Delete(ctx, "users:*")
 	return nil
+}
+
+
+func (s *userService) MarkFirstOrder(ctx context.Context, userID uint, orderTime time.Time) error {
+	
+	user, err := s.Get(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	if user.FirstOrder != nil {
+		return nil
+	}
+
+	user.FirstOrder = &orderTime
+
+	return s.Update(ctx, &user)
 }

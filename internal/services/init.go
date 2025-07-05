@@ -12,10 +12,15 @@ type Services struct {
 }
 
 func NewServices(datas *datas.Datas, redisCache *cache.RedisCache) *Services {
+
+	orderItemService :=  NewOrderItemService(datas.OrderItem, redisCache)
+	userService :=  NewUserService(datas.User, redisCache)
+	orderHistoryService := NewOrderHistoryService(datas.OrderHistory, userService, redisCache)
+	
 	return &Services{
-		OrderItem:    NewOrderItemService(datas.OrderItem, redisCache),
-		OrderHistory: NewOrderHistoryService(datas.OrderHistory, redisCache),
-		User:         NewUserService(datas.User, redisCache),
+		OrderItem:    orderItemService,
+		OrderHistory: orderHistoryService,
+		User:         userService,
 	}
 }
 
@@ -23,8 +28,8 @@ func NewOrderItemService(data datas.OrderItemData, cache *cache.RedisCache) Orde
 	return &orderItemService{data: data, cache: *cache}
 }
 
-func NewOrderHistoryService(data datas.OrderHistoryData, cache *cache.RedisCache) OrderHistoryService {
-	return &orderHistoryService{data: data, cache: *cache}
+func NewOrderHistoryService(data datas.OrderHistoryData, userService UserService, cache *cache.RedisCache) OrderHistoryService {
+	return &orderHistoryService{data: data, userService: userService , cache: *cache}
 }
 
 func NewUserService(data datas.UserData, cache *cache.RedisCache) UserService {
