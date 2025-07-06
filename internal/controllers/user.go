@@ -24,7 +24,7 @@ func (c *UserController) Create(ctx echo.Context) error {
 		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to create user")
 	}
 
-	return utils.SuccessResponse(ctx, http.StatusCreated, user)
+	return utils.SuccessResponse(ctx, http.StatusCreated,  map[string]interface{}{"message": "User created successfully"})
 }
 
 func (c *UserController) List(ctx echo.Context) error {
@@ -38,12 +38,12 @@ func (c *UserController) List(ctx echo.Context) error {
 		limit = 10
 	}
 
-	orderItems, err := c.service.List(ctx.Request().Context(), page, limit)
+	UserPagination, err := c.service.List(ctx.Request().Context(), page, limit)
 	if err != nil {
 		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to fetch users")
 	}
 
-	return utils.SuccessResponse(ctx, http.StatusOK, orderItems)
+	return utils.PaginatedResponse(ctx, http.StatusOK, UserPagination.Data, UserPagination.MetaData)
 }
 
 func (c *UserController) Get(ctx echo.Context) error {
@@ -76,7 +76,7 @@ func (c *UserController) Update(ctx echo.Context) error {
 		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to update user")
 	}
 
-	return utils.SuccessResponse(ctx, http.StatusOK, user)
+	return utils.SuccessResponse(ctx, http.StatusOK,  map[string]interface{}{"message": "User updated successfully"})
 }
 
 func (c *UserController) Delete(ctx echo.Context) error {

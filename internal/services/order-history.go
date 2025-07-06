@@ -6,13 +6,14 @@ import (
 	"time"
 	"zleeper-be/internal/datas"
 	"zleeper-be/internal/models"
+	"zleeper-be/internal/utils"
 	"zleeper-be/pkg/cache"
 )
 
 type OrderHistoryService interface {
 	Create(ctx context.Context, orderHistory *models.OrderHistory) error
 	Update(ctx context.Context, orderHistory *models.OrderHistory) error
-	List(ctx context.Context, page int, limit int) ([]models.OrderHistory, error)
+	List(ctx context.Context, page int, limit int) (models.OrderHistoryPagination, error)
 	Get(ctx context.Context, id uint) (models.OrderHistory, error)
 	Delete(ctx context.Context, id uint) error
 }
@@ -49,33 +50,41 @@ func (s *orderHistoryService) Update(ctx context.Context, orderHistory *models.O
 		return err
 	}
 	
-	s.cache.Delete(ctx, "order_history:"+string(orderHistory.ID))
+	s.cache.Delete(ctx, "order_history:"+string(rune(orderHistory.ID)))
 	s.cache.Delete(ctx, "order_histories:*")
 	return nil
 }
 
-func (s *orderHistoryService) List(ctx context.Context, page int, limit int) ([]models.OrderHistory, error) {
-	cacheKey := "order_histories:page:" + string(page) + ":limit:" + string(limit)
+func (s *orderHistoryService) List(ctx context.Context, page int, limit int) (models.OrderHistoryPagination, error) {
+	cacheKey := "order_histories:page:" + string(rune(page)) + ":limit:" + string(rune(limit))
 	
-	var cachedItems []models.OrderHistory
+	var cachedItems models.OrderHistoryPagination
 	if err := s.cache.Get(ctx, cacheKey, &cachedItems); err == nil {
 		return cachedItems, nil
 	}
-	
-	offset := (page - 1) * limit
+
+	totalData, err := s.data.CountData(ctx)
+	if err != nil {
+		return cachedItems, err
+	}
+
+	offset, metaData := utils.PaginationCalculation(page, limit, totalData)
 	
 	items, err := s.data.Fetch(ctx, limit, offset)
 	if err != nil {
-		return nil, err
+		return cachedItems, err
 	}
+
+	cachedItems.Data = items
+	cachedItems.MetaData = metaData
+
+	s.cache.Set(ctx, cacheKey, cachedItems, 5*time.Minute)
 	
-	s.cache.Set(ctx, cacheKey, items, 5*time.Minute)
-	
-	return items, nil
+	return cachedItems, nil
 }
 
 func (s *orderHistoryService) Get(ctx context.Context, id uint) (models.OrderHistory, error) {
-	cacheKey := "order_history:" + string(id)
+	cacheKey := "order_history:" + string(rune(id))
 	
 	var cachedItem models.OrderHistory
 	if err := s.cache.Get(ctx, cacheKey, &cachedItem); err == nil {
@@ -98,7 +107,7 @@ func (s *orderHistoryService) Delete(ctx context.Context, id uint) error {
 		return err
 	}
 	
-	s.cache.Delete(ctx, "order_history:"+string(id))
+	s.cache.Delete(ctx, "order_history:"+string(rune(id)))
 	s.cache.Delete(ctx, "order_histories:*")
 	return nil
 }

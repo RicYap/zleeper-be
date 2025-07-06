@@ -29,3 +29,8 @@ type OrderHistoryResponse struct {
 	ItemName     string    `json:"item_name"`
 	ItemPrice    float64   `json:"item_price"`
 }
+
+type OrderHistoryPagination struct {
+	Data 		[]OrderHistory 	`json:"data"`
+	MetaData 	any	 			`json:"metadata"`
+}

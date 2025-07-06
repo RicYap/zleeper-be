@@ -16,3 +16,8 @@ type OrderItem struct {
     UpdatedAt time.Time      `json:"updated_at"`
     DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 }
+
+type OrderItemPagination struct {
+	Data 		[]OrderItem 	`json:"data"`
+	MetaData 	any	 			`json:"metadata"`
+}

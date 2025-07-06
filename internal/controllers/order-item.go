@@ -25,7 +25,7 @@ func (c *OrderItemController) Create(ctx echo.Context) error {
 		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to create order item")
 	}
 
-	return utils.SuccessResponse(ctx, http.StatusCreated, orderItem)
+	return utils.SuccessResponse(ctx, http.StatusCreated,  map[string]interface{}{"message": "Order item created successfully"})
 }
 
 func (c *OrderItemController) List(ctx echo.Context) error {
@@ -39,12 +39,12 @@ func (c *OrderItemController) List(ctx echo.Context) error {
 		limit = 10
 	}
 
-	orderItems, err := c.service.List(ctx.Request().Context(), page, limit)
+	orderItemsPagination, err := c.service.List(ctx.Request().Context(), page, limit)
 	if err != nil {
 		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to fetch order items")
 	}
 
-	return utils.SuccessResponse(ctx, http.StatusOK, orderItems)
+	return utils.PaginatedResponse(ctx, http.StatusOK, orderItemsPagination.Data, orderItemsPagination.MetaData)
 }
 
 func (c *OrderItemController) Get(ctx echo.Context) error {
@@ -77,7 +77,7 @@ func (c *OrderItemController) Update(ctx echo.Context) error {
 		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to update order item")
 	}
 
-	return utils.SuccessResponse(ctx, http.StatusOK, orderItem)
+	return utils.SuccessResponse(ctx, http.StatusOK,  map[string]interface{}{"message": "Order item updated successfully"})
 }
 
 func (c *OrderItemController) Delete(ctx echo.Context) error {

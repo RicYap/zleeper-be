@@ -5,13 +5,14 @@ import (
 	"time"
 	"zleeper-be/internal/datas"
 	"zleeper-be/internal/models"
+	"zleeper-be/internal/utils"
 	"zleeper-be/pkg/cache"
 )
 
 type UserService interface {
 	Create(ctx context.Context, user *models.User) error
 	Update(ctx context.Context, user *models.User) error
-	List(ctx context.Context, page int, limit int) ([]models.User, error)
+	List(ctx context.Context, page int, limit int) (models.UserPagination, error)
 	Get(ctx context.Context, id uint) (models.User, error)
 	Delete(ctx context.Context, id uint) error
 	MarkFirstOrder(ctx context.Context, userID uint, orderTime time.Time) error
@@ -48,24 +49,32 @@ func (s *userService) Update(ctx context.Context, user *models.User) error {
 	return nil
 }
 
-func (s *userService) List(ctx context.Context, page int, limit int) ([]models.User, error) {
+func (s *userService) List(ctx context.Context, page int, limit int) (models.UserPagination, error) {
 	cacheKey := "users:page:" + string(rune(page)) + ":limit:" + string(rune(limit))
 	
-	var cachedItems []models.User
+	var cachedItems models.UserPagination
 	if err := s.cache.Get(ctx, cacheKey, &cachedItems); err == nil {
 		return cachedItems, nil
 	}
 	
-	offset := (page - 1) * limit
+	totalData, err := s.data.CountData(ctx)
+	if err != nil {
+		return cachedItems, err
+	}
+
+	offset, metaData := utils.PaginationCalculation(page, limit, totalData)
 	
 	items, err := s.data.Fetch(ctx, limit, offset)
 	if err != nil {
-		return nil, err
+		return cachedItems, err
 	}
+
+	cachedItems.Data = items
+	cachedItems.MetaData = metaData
 	
 	s.cache.Set(ctx, cacheKey, items, 5*time.Minute)
 	
-	return items, nil
+	return cachedItems, nil
 }
 
 func (s *userService) Get(ctx context.Context, id uint) (models.User, error) {

@@ -10,6 +10,7 @@ import (
 type OrderItemData interface {
 	Create(ctx context.Context, orderItem *models.OrderItem) error
 	Update(ctx context.Context, orderItem *models.OrderItem) error
+	CountData(ctx context.Context) (int, error)
 	Fetch(ctx context.Context, limit int, offset int) ([]models.OrderItem, error)
 	GetByID(ctx context.Context, id uint) (models.OrderItem, error)
 	Delete(ctx context.Context, id uint) error
@@ -25,6 +26,15 @@ func (d *orderItemData) Create(ctx context.Context, orderItem *models.OrderItem)
 
 func (d *orderItemData) Update(ctx context.Context, orderItem *models.OrderItem) error {
 	return d.db.WithContext(ctx).Save(orderItem).Error
+}
+
+func (d *orderItemData) CountData(ctx context.Context) (int, error) {
+	var count int64
+	err := d.db.WithContext(ctx).
+		Model(&models.OrderItem{}).
+		Where("deleted_at IS NULL").
+		Count(&count).Error
+	return int(count), err
 }
 
 func (d *orderItemData) Fetch(ctx context.Context, limit int, offset int) ([]models.OrderItem, error) {

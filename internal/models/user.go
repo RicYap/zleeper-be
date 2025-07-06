@@ -15,3 +15,8 @@ type User struct {
 	UpdatedAt  time.Time  `json:"updated_at"`
 	DeletedAt  gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 }
+
+type UserPagination struct {
+	Data 		[]User 	`json:"data"`
+	MetaData 	any	 	`json:"metadata"`
+}

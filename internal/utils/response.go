@@ -5,10 +5,11 @@ import (
 )
 
 type Response struct {
-	Success bool        `json:"success"`
-	Message string      `json:"message,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
-	Error   string      `json:"error,omitempty"`
+	Success 	bool        `json:"success"`
+	Message 	string      `json:"message,omitempty"`
+	Data    	interface{} `json:"data,omitempty"`
+	MetaData 	interface{} `json:"metadata,omitempty"`
+	Error   	string      `json:"error,omitempty"`
 }
 
 func SuccessResponse(c echo.Context, statusCode int, data interface{}) error {
@@ -25,32 +26,10 @@ func ErrorResponse(c echo.Context, statusCode int, errorMessage string) error {
 	})
 }
 
-func PaginatedResponse(c echo.Context, statusCode int, data interface{}, total int64, page int, limit int) error {
+func PaginatedResponse(c echo.Context, statusCode int, data interface{}, metadata interface{}) error {
 	return c.JSON(statusCode, Response{
 		Success: true,
-		Data: struct {
-			Items      interface{} `json:"items"`
-			Total      int64       `json:"total"`
-			Page       int         `json:"page"`
-			Limit      int         `json:"limit"`
-			TotalPages int         `json:"total_pages"`
-		}{
-			Items:      data,
-			Total:      total,
-			Page:       page,
-			Limit:      limit,
-			TotalPages: calculateTotalPages(total, limit),
-		},
+		Data: data,
+		MetaData: metadata,
 	})
-}
-
-func calculateTotalPages(total int64, limit int) int {
-	if limit == 0 {
-		return 0
-	}
-	totalPages := int(total) / limit
-	if int(total)%limit > 0 {
-		totalPages++
-	}
-	return totalPages
 }

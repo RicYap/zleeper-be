@@ -24,7 +24,7 @@ func (c *OrderHistoryController) Create(ctx echo.Context) error {
 		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to create order history")
 	}
 
-	return utils.SuccessResponse(ctx, http.StatusCreated, orderHistory)
+	return utils.SuccessResponse(ctx, http.StatusCreated, map[string]interface{}{"message": "Order history created successfully"})
 }
 
 func (c *OrderHistoryController) List(ctx echo.Context) error {
@@ -38,12 +38,12 @@ func (c *OrderHistoryController) List(ctx echo.Context) error {
 		limit = 10
 	}
 
-	orderItems, err := c.service.List(ctx.Request().Context(), page, limit)
+	orderHistoriesPagination, err := c.service.List(ctx.Request().Context(), page, limit)
 	if err != nil {
 		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to fetch order histories")
 	}
 
-	return utils.SuccessResponse(ctx, http.StatusOK, orderItems)
+	return utils.PaginatedResponse(ctx, http.StatusOK, orderHistoriesPagination.Data, orderHistoriesPagination.MetaData)
 }
 
 func (c *OrderHistoryController) Get(ctx echo.Context) error {
@@ -76,7 +76,7 @@ func (c *OrderHistoryController) Update(ctx echo.Context) error {
 		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to update order history")
 	}
 
-	return utils.SuccessResponse(ctx, http.StatusOK, orderHistory)
+	return utils.SuccessResponse(ctx, http.StatusOK,  map[string]interface{}{"message": "Order history updated successfully"})
 }
 
 func (c *OrderHistoryController) Delete(ctx echo.Context) error {

@@ -10,6 +10,7 @@ import (
 type UserData interface {
 	Create(ctx context.Context, user *models.User) error
 	Update(ctx context.Context, user *models.User) error
+	CountData(ctx context.Context) (int, error)
 	Fetch(ctx context.Context, limit int, offset int) ([]models.User, error)
 	GetByID(ctx context.Context, id uint) (models.User, error)
 	Delete(ctx context.Context, id uint) error
@@ -25,6 +26,15 @@ func (d *userData) Create(ctx context.Context, user *models.User) error {
 
 func (d *userData) Update(ctx context.Context, user *models.User) error {
 	return d.db.WithContext(ctx).Save(user).Error
+}
+
+func (d *userData) CountData(ctx context.Context) (int, error) {
+	var count int64
+	err := d.db.WithContext(ctx).
+		Model(&models.User{}).
+		Where("deleted_at IS NULL").
+		Count(&count).Error
+	return int(count), err
 }
 
 func (d *userData) Fetch(ctx context.Context, limit int, offset int) ([]models.User, error) {
