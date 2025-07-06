@@ -3,6 +3,7 @@ package services
 
 import (
 	"context"
+	"strconv"
 	"time"
 	"zleeper-be/internal/datas"
 	"zleeper-be/internal/models"
@@ -14,8 +15,8 @@ type OrderHistoryService interface {
 	Create(ctx context.Context, orderHistory *models.OrderHistory) error
 	Update(ctx context.Context, orderHistory *models.OrderHistory) error
 	List(ctx context.Context, page int, limit int) (models.OrderHistoryPagination, error)
-	Get(ctx context.Context, id uint) (models.OrderHistory, error)
-	Delete(ctx context.Context, id uint) error
+	Get(ctx context.Context, id int) (models.OrderHistoryResponse, error)
+	Delete(ctx context.Context, id int) error
 }
 
 type orderHistoryService struct {
@@ -28,7 +29,7 @@ func (s *orderHistoryService) Create(ctx context.Context, orderHistory *models.O
 	orderHistory.CreatedAt = time.Now()
 	orderHistory.UpdatedAt = time.Now()
 
-	err := s.userService.MarkFirstOrder(ctx, orderHistory.UserID, orderHistory.CreatedAt)
+	err := s.userService.MarkFirstOrder(ctx, int(orderHistory.UserID), orderHistory.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -38,11 +39,14 @@ func (s *orderHistoryService) Create(ctx context.Context, orderHistory *models.O
 		return err
 	}
 	
-	s.cache.Delete(ctx, "order_histories:*")
+	s.cache.DeleteAll(ctx, "order_histories:*")
 	return nil
 }
 
 func (s *orderHistoryService) Update(ctx context.Context, orderHistory *models.OrderHistory) error {
+
+	idString := strconv.Itoa(int(orderHistory.ID))
+
 	orderHistory.UpdatedAt = time.Now()
 	
 	err := s.data.Update(ctx, orderHistory)
@@ -50,15 +54,23 @@ func (s *orderHistoryService) Update(ctx context.Context, orderHistory *models.O
 		return err
 	}
 	
-	s.cache.Delete(ctx, "order_history:"+string(rune(orderHistory.ID)))
-	s.cache.Delete(ctx, "order_histories:*")
+	s.cache.Delete(ctx, "order_history:" + idString)
+	s.cache.DeleteAll(ctx, "order_histories:*")
 	return nil
 }
 
 func (s *orderHistoryService) List(ctx context.Context, page int, limit int) (models.OrderHistoryPagination, error) {
-	cacheKey := "order_histories:page:" + string(rune(page)) + ":limit:" + string(rune(limit))
 	
-	var cachedItems models.OrderHistoryPagination
+	var (
+		cachedItems models.OrderHistoryPagination
+		itemResponses []models.OrderHistoryResponse
+	)
+
+	pageString := strconv.Itoa(page)
+	limitString := strconv.Itoa(limit)
+	
+	cacheKey := "order_histories:page:" + pageString + ":limit:" + limitString
+	
 	if err := s.cache.Get(ctx, cacheKey, &cachedItems); err == nil {
 		return cachedItems, nil
 	}
@@ -75,7 +87,13 @@ func (s *orderHistoryService) List(ctx context.Context, page int, limit int) (mo
 		return cachedItems, err
 	}
 
-	cachedItems.Data = items
+	for _, item := range items {
+		itemResponse := s.FormatResponse(item)
+
+		itemResponses = append(itemResponses, itemResponse)
+	}
+
+	cachedItems.Data = itemResponses
 	cachedItems.MetaData = metaData
 
 	s.cache.Set(ctx, cacheKey, cachedItems, 5*time.Minute)
@@ -83,48 +101,53 @@ func (s *orderHistoryService) List(ctx context.Context, page int, limit int) (mo
 	return cachedItems, nil
 }
 
-func (s *orderHistoryService) Get(ctx context.Context, id uint) (models.OrderHistory, error) {
-	cacheKey := "order_history:" + string(rune(id))
+func (s *orderHistoryService) Get(ctx context.Context, id int) (models.OrderHistoryResponse, error) {
+
+	idString := strconv.Itoa(id)
+
+	cacheKey := "order_history:" + idString
 	
-	var cachedItem models.OrderHistory
+	var cachedItem models.OrderHistoryResponse
 	if err := s.cache.Get(ctx, cacheKey, &cachedItem); err == nil {
 		return cachedItem, nil
 	}
 	
 	item, err := s.data.GetByID(ctx, id)
 	if err != nil {
-		return models.OrderHistory{}, err
+		return models.OrderHistoryResponse{}, err
 	}
+
+	itemResponse := s.FormatResponse(item)
 	
-	s.cache.Set(ctx, cacheKey, item, 5*time.Minute)
+	s.cache.Set(ctx, cacheKey, itemResponse, 5*time.Minute)
 	
-	return item, nil
+	return itemResponse, nil
 }
 
-func (s *orderHistoryService) Delete(ctx context.Context, id uint) error {
+func (s *orderHistoryService) Delete(ctx context.Context, id int) error {
+
+	idString := strconv.Itoa(id)
+
 	err := s.data.Delete(ctx, id)
 	if err != nil {
 		return err
 	}
 	
-	s.cache.Delete(ctx, "order_history:"+string(rune(id)))
-	s.cache.Delete(ctx, "order_histories:*")
+	s.cache.Delete(ctx, "order_history:" + idString)
+	s.cache.DeleteAll(ctx, "order_histories:*")
 	return nil
 }
 
-// func (s *orderHistoryService) toResponse(orderHistory *models.OrderHistory) *models.OrderHistoryResponse {
-// 	if orderHistory == nil {
-// 		return nil
-// 	}
+func (s *orderHistoryService) FormatResponse(orderHistory models.OrderHistory) models.OrderHistoryResponse {
 
-// 	return &models.OrderHistoryResponse{
-// 		ID:           orderHistory.ID,
-// 		UserID:       orderHistory.UserID,
-// 		OrderItemID:  orderHistory.OrderItemID,
-// 		Descriptions: orderHistory.Description,
-// 		CreatedAt:    orderHistory.CreatedAt,
-// 		UserName:     orderHistory.User.FullName,
-// 		ItemName:     orderHistory.OrderItem.Name,
-// 		ItemPrice:    orderHistory.OrderItem.Price,
-// 	}
-// }
+	return models.OrderHistoryResponse{
+		ID:           orderHistory.ID,
+		UserID:       orderHistory.UserID,
+		OrderItemID:  orderHistory.OrderItemID,
+		Descriptions: orderHistory.Description,
+		CreatedAt:    orderHistory.CreatedAt,
+		UserName:     orderHistory.User.FullName,
+		ItemName:     orderHistory.OrderItem.Name,
+		ItemPrice:    orderHistory.OrderItem.Price,
+	}
+}

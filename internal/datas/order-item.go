@@ -12,8 +12,8 @@ type OrderItemData interface {
 	Update(ctx context.Context, orderItem *models.OrderItem) error
 	CountData(ctx context.Context) (int, error)
 	Fetch(ctx context.Context, limit int, offset int) ([]models.OrderItem, error)
-	GetByID(ctx context.Context, id uint) (models.OrderItem, error)
-	Delete(ctx context.Context, id uint) error
+	GetByID(ctx context.Context, id int) (models.OrderItem, error)
+	Delete(ctx context.Context, id int) error
 }
 
 type orderItemData struct {
@@ -25,7 +25,15 @@ func (d *orderItemData) Create(ctx context.Context, orderItem *models.OrderItem)
 }
 
 func (d *orderItemData) Update(ctx context.Context, orderItem *models.OrderItem) error {
-	return d.db.WithContext(ctx).Save(orderItem).Error
+    return d.db.WithContext(ctx).
+        Model(orderItem).
+		Where("id = ?", orderItem.ID).
+        UpdateColumns(map[string]interface{}{
+            "name":  orderItem.Name,
+            "price":    orderItem.Price,
+            "expired_at":  orderItem.ExpiredAt,
+            "updated_at":  orderItem.UpdatedAt, 
+        }).Error
 }
 
 func (d *orderItemData) CountData(ctx context.Context) (int, error) {
@@ -47,7 +55,7 @@ func (d *orderItemData) Fetch(ctx context.Context, limit int, offset int) ([]mod
 	return orderItems, err
 }
 
-func (d *orderItemData) GetByID(ctx context.Context, id uint) (models.OrderItem, error) {
+func (d *orderItemData) GetByID(ctx context.Context, id int) (models.OrderItem, error) {
 	var orderItem models.OrderItem
 	err := d.db.WithContext(ctx).
 		Where("deleted_at IS NULL").
@@ -55,7 +63,7 @@ func (d *orderItemData) GetByID(ctx context.Context, id uint) (models.OrderItem,
 	return orderItem, err
 }
 
-func (d *orderItemData) Delete(ctx context.Context, id uint) error {
+func (d *orderItemData) Delete(ctx context.Context, id int) error {
     return d.db.WithContext(ctx).
         Where("id = ?", id).
         Delete(&models.OrderItem{}).

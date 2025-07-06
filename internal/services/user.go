@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"strconv"
 	"time"
 	"zleeper-be/internal/datas"
 	"zleeper-be/internal/models"
@@ -13,9 +14,9 @@ type UserService interface {
 	Create(ctx context.Context, user *models.User) error
 	Update(ctx context.Context, user *models.User) error
 	List(ctx context.Context, page int, limit int) (models.UserPagination, error)
-	Get(ctx context.Context, id uint) (models.User, error)
-	Delete(ctx context.Context, id uint) error
-	MarkFirstOrder(ctx context.Context, userID uint, orderTime time.Time) error
+	Get(ctx context.Context, id int) (models.User, error)
+	Delete(ctx context.Context, id int) error
+	MarkFirstOrder(ctx context.Context, userID int, orderTime time.Time) error
 }
 
 type userService struct {
@@ -32,11 +33,14 @@ func (s *userService) Create(ctx context.Context, user *models.User) error {
 		return err
 	}
 	
-	s.cache.Delete(ctx, "users:*")
+	s.cache.DeleteAll(ctx, "users:*")
 	return nil
 }
 
 func (s *userService) Update(ctx context.Context, user *models.User) error {
+
+	idString := strconv.Itoa(int(user.ID))
+	
 	user.UpdatedAt = time.Now()
 	
 	err := s.data.Update(ctx, user)
@@ -44,15 +48,20 @@ func (s *userService) Update(ctx context.Context, user *models.User) error {
 		return err
 	}
 	
-	s.cache.Delete(ctx, "user:"+string(rune(user.ID)))
-	s.cache.Delete(ctx, "users:*")
+	s.cache.Delete(ctx, "user:" + idString)
+	s.cache.DeleteAll(ctx, "users:*")
 	return nil
 }
 
 func (s *userService) List(ctx context.Context, page int, limit int) (models.UserPagination, error) {
-	cacheKey := "users:page:" + string(rune(page)) + ":limit:" + string(rune(limit))
-	
+
 	var cachedItems models.UserPagination
+	
+	pageString := strconv.Itoa(page)
+	limitString := strconv.Itoa(limit)
+
+	cacheKey := "users:page:" + pageString + ":limit:" + limitString
+	
 	if err := s.cache.Get(ctx, cacheKey, &cachedItems); err == nil {
 		return cachedItems, nil
 	}
@@ -77,8 +86,11 @@ func (s *userService) List(ctx context.Context, page int, limit int) (models.Use
 	return cachedItems, nil
 }
 
-func (s *userService) Get(ctx context.Context, id uint) (models.User, error) {
-	cacheKey := "user:" + string(rune(id))
+func (s *userService) Get(ctx context.Context, id int) (models.User, error) {
+
+	idString := strconv.Itoa(id)
+
+	cacheKey := "user:" + idString
 	
 	var cachedItem models.User
 	if err := s.cache.Get(ctx, cacheKey, &cachedItem); err == nil {
@@ -95,19 +107,22 @@ func (s *userService) Get(ctx context.Context, id uint) (models.User, error) {
 	return item, nil
 }
 
-func (s *userService) Delete(ctx context.Context, id uint) error {
+func (s *userService) Delete(ctx context.Context, id int) error {
+	
+	idString := strconv.Itoa(id)
+
 	err := s.data.Delete(ctx, id)
 	if err != nil {
 		return err
 	}
 	
-	s.cache.Delete(ctx, "user:"+string(rune(id)))
-	s.cache.Delete(ctx, "users:*")
+	s.cache.Delete(ctx, "user:" + idString)
+	s.cache.DeleteAll(ctx, "users:*")
 	return nil
 }
 
 
-func (s *userService) MarkFirstOrder(ctx context.Context, userID uint, orderTime time.Time) error {
+func (s *userService) MarkFirstOrder(ctx context.Context, userID int, orderTime time.Time) error {
 	
 	user, err := s.Get(ctx, userID)
 	if err != nil {

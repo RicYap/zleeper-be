@@ -52,7 +52,7 @@ func (c *UserController) Get(ctx echo.Context) error {
 		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid ID")
 	}
 
-	user, err := c.service.Get(ctx.Request().Context(), uint(id))
+	user, err := c.service.Get(ctx.Request().Context(), id)
 	if err != nil {
 		return utils.ErrorResponse(ctx, http.StatusNotFound, "User not found")
 	}
@@ -85,7 +85,7 @@ func (c *UserController) Delete(ctx echo.Context) error {
 		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid ID")
 	}
 
-	if err := c.service.Delete(ctx.Request().Context(), uint(id)); err != nil {
+	if err := c.service.Delete(ctx.Request().Context(), id); err != nil {
 		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to delete user")
 	}
 

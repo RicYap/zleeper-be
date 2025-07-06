@@ -52,7 +52,7 @@ func (c *OrderHistoryController) Get(ctx echo.Context) error {
 		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid ID")
 	}
 
-	orderHistory, err := c.service.Get(ctx.Request().Context(), uint(id))
+	orderHistory, err := c.service.Get(ctx.Request().Context(), id)
 	if err != nil {
 		return utils.ErrorResponse(ctx, http.StatusNotFound, "Order history not found")
 	}
@@ -85,7 +85,7 @@ func (c *OrderHistoryController) Delete(ctx echo.Context) error {
 		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid ID")
 	}
 
-	if err := c.service.Delete(ctx.Request().Context(), uint(id)); err != nil {
+	if err := c.service.Delete(ctx.Request().Context(), id); err != nil {
 		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to delete order history")
 	}
 

@@ -4,10 +4,12 @@ package cache
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"zleeper-be/config"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type RedisCache struct {
@@ -42,6 +44,21 @@ func (r *RedisCache) Set(ctx context.Context, key string, value interface{}, exp
 
 func (r *RedisCache) Delete(ctx context.Context, key string) error {
 	return r.client.Del(ctx, key).Err()
+}
+
+func (r *RedisCache) DeleteAll(ctx context.Context, key string) error {
+
+	iter := r.client.Scan(ctx, 0, key, 0).Iterator()
+	for iter.Next(ctx) {
+		if err := r.Delete(ctx, iter.Val()); err != nil {
+			log.Printf("Failed to delete key %s: %v", iter.Val(), err)
+		}
+	}
+	if err := iter.Err(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *RedisCache) Close() error {

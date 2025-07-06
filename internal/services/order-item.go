@@ -3,6 +3,7 @@ package services
 
 import (
 	"context"
+	"strconv"
 	"time"
 	"zleeper-be/internal/datas"
 	"zleeper-be/internal/models"
@@ -14,8 +15,8 @@ type OrderItemService interface {
 	Create(ctx context.Context, orderItem *models.OrderItem) error
 	Update(ctx context.Context, orderItem *models.OrderItem) error
 	List(ctx context.Context, page int, limit int) (models.OrderItemPagination, error)
-	Get(ctx context.Context, id uint) (models.OrderItem, error)
-	Delete(ctx context.Context, id uint) error
+	Get(ctx context.Context, id int) (models.OrderItem, error)
+	Delete(ctx context.Context, id int) error
 }
 
 type orderItemService struct {
@@ -32,11 +33,14 @@ func (s *orderItemService) Create(ctx context.Context, orderItem *models.OrderIt
 		return err
 	}
 	
-	s.cache.Delete(ctx, "order_items:*")
+	s.cache.DeleteAll(ctx, "order_items:*")
 	return nil
 }
 
 func (s *orderItemService) Update(ctx context.Context, orderItem *models.OrderItem) error {
+	
+	idString := strconv.Itoa(int(orderItem.ID))
+	
 	orderItem.UpdatedAt = time.Now()
 	
 	err := s.data.Update(ctx, orderItem)
@@ -44,15 +48,20 @@ func (s *orderItemService) Update(ctx context.Context, orderItem *models.OrderIt
 		return err
 	}
 	
-	s.cache.Delete(ctx, "order_item:"+string(rune(orderItem.ID)))
-	s.cache.Delete(ctx, "order_items:*")
+	s.cache.Delete(ctx, "order_item:" + idString)
+	s.cache.DeleteAll(ctx, "order_items:*")
 	return nil
 }
 
 func (s *orderItemService) List(ctx context.Context, page int, limit int) (models.OrderItemPagination, error) {
-	cacheKey := "order_items:page:" + string(rune(page)) + ":limit:" + string(rune(limit))
-	
+
 	var cachedItems models.OrderItemPagination
+
+	pageString := strconv.Itoa(page)
+	limitString := strconv.Itoa(limit)
+
+	cacheKey := "order_items:page:" + pageString + ":limit:" + limitString
+	
 	if err := s.cache.Get(ctx, cacheKey, &cachedItems); err == nil {
 		return cachedItems, nil
 	}
@@ -77,8 +86,11 @@ func (s *orderItemService) List(ctx context.Context, page int, limit int) (model
 	return cachedItems, nil
 }
 
-func (s *orderItemService) Get(ctx context.Context, id uint) (models.OrderItem, error) {
-	cacheKey := "order_item:" + string(rune(id))
+func (s *orderItemService) Get(ctx context.Context, id int) (models.OrderItem, error) {
+
+	idString := strconv.Itoa(id)
+
+	cacheKey := "order_item:" + idString
 	
 	var cachedItem models.OrderItem
 	if err := s.cache.Get(ctx, cacheKey, &cachedItem); err == nil {
@@ -95,13 +107,16 @@ func (s *orderItemService) Get(ctx context.Context, id uint) (models.OrderItem, 
 	return item, nil
 }
 
-func (s *orderItemService) Delete(ctx context.Context, id uint) error {
+func (s *orderItemService) Delete(ctx context.Context, id int) error {
+
+	idString := strconv.Itoa(id)
+
 	err := s.data.Delete(ctx, id)
 	if err != nil {
 		return err
 	}
 	
-	s.cache.Delete(ctx, "order_item:"+string(rune(id)))
-	s.cache.Delete(ctx, "order_items:*")
+	s.cache.Delete(ctx, "order_item:" + idString)
+	s.cache.DeleteAll(ctx, "order_items:*")
 	return nil
 }
