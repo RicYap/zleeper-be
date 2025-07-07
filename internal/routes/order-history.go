@@ -9,4 +9,5 @@ func (r *Routes) registerOrderHistoryRoutes(api *echo.Group) {
 	orderItems.GET("/:id", r.OrderHistoryController.Get)
 	orderItems.PUT("/:id", r.OrderHistoryController.Update)
 	orderItems.DELETE("/:id", r.OrderHistoryController.Delete)
+	orderItems.GET("/groupbydate", r.OrderHistoryController.GetAllOrdersByDate)
 }

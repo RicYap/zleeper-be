@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"zleeper-be/internal/models"
@@ -8,6 +9,7 @@ import (
 	"zleeper-be/internal/utils"
 
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 )
 
 type OrderHistoryController struct {
@@ -20,11 +22,25 @@ func (c *OrderHistoryController) Create(ctx echo.Context) error {
 		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid request payload")
 	}
 
-	if err := c.service.Create(ctx.Request().Context(), &orderHistory); err != nil {
-		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to create order history")
-	}
+	resultChan := make(chan uint)
+	errChan := make(chan error)
 
-	return utils.SuccessResponse(ctx, http.StatusCreated, map[string]interface{}{"message": "Order history created successfully"})
+	go func() {
+		if err := c.service.Create(ctx.Request().Context(), &orderHistory); err != nil {
+			errChan <- err
+			return
+		}
+		resultChan <- orderHistory.ID
+	}()
+
+	select {
+	case id := <-resultChan:
+		return utils.SuccessResponse(ctx, http.StatusCreated, map[string]interface{}{
+			"id": id,
+		})
+	case err := <-errChan:
+		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to create order history: "+err.Error())
+	}
 }
 
 func (c *OrderHistoryController) List(ctx echo.Context) error {
@@ -34,16 +50,28 @@ func (c *OrderHistoryController) List(ctx echo.Context) error {
 	}
 
 	limit, _ := strconv.Atoi(ctx.QueryParam("limit"))
-	if limit < 1 {
+	if limit < 1 || limit > 100 {
 		limit = 10
 	}
 
-	orderHistoriesPagination, err := c.service.List(ctx.Request().Context(), page, limit)
-	if err != nil {
-		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to fetch order histories")
-	}
+	resultChan := make(chan models.OrderHistoryPagination)
+	errChan := make(chan error)
 
-	return utils.PaginatedResponse(ctx, http.StatusOK, orderHistoriesPagination.Data, orderHistoriesPagination.MetaData)
+	go func() {
+		result, err := c.service.List(ctx.Request().Context(), page, limit)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		resultChan <- result
+	}()
+
+	select {
+	case result := <-resultChan:
+		return utils.PaginatedResponse(ctx, http.StatusOK, result.Data, result.MetaData)
+	case err := <-errChan:
+		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to fetch order histories: "+err.Error())
+	}
 }
 
 func (c *OrderHistoryController) Get(ctx echo.Context) error {
@@ -52,12 +80,27 @@ func (c *OrderHistoryController) Get(ctx echo.Context) error {
 		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid ID")
 	}
 
-	orderHistory, err := c.service.Get(ctx.Request().Context(), id)
-	if err != nil {
-		return utils.ErrorResponse(ctx, http.StatusNotFound, "Order history not found")
-	}
+	resultChan := make(chan models.OrderHistoryResponse)
+	errChan := make(chan error)
 
-	return utils.SuccessResponse(ctx, http.StatusOK, orderHistory)
+	go func() {
+		order, err := c.service.Get(ctx.Request().Context(), id)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		resultChan <- order
+	}()
+
+	select {
+	case order := <-resultChan:
+		return utils.SuccessResponse(ctx, http.StatusOK, order)
+	case err := <-errChan:
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return utils.ErrorResponse(ctx, http.StatusNotFound, "Order history not found")
+		}
+		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to get order history: "+err.Error())
+	}
 }
 
 func (c *OrderHistoryController) Update(ctx echo.Context) error {
@@ -72,7 +115,7 @@ func (c *OrderHistoryController) Update(ctx echo.Context) error {
 	}
 
 	orderHistory.ID = uint(id)
-	if err := c.service.Update(ctx.Request().Context(), &orderHistory); err != nil {
+		if err := c.service.Update(ctx.Request().Context(), &orderHistory); err != nil {
 		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to update order history")
 	}
 
@@ -85,7 +128,7 @@ func (c *OrderHistoryController) Delete(ctx echo.Context) error {
 		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid ID")
 	}
 
-	if err := c.service.Delete(ctx.Request().Context(), id); err != nil {
+		if err := c.service.Delete(ctx.Request().Context(), id); err != nil {
 		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to delete order history")
 	}
 
@@ -93,11 +136,22 @@ func (c *OrderHistoryController) Delete(ctx echo.Context) error {
 }
 
 func (c *OrderHistoryController) GetAllOrdersByDate(ctx echo.Context) error {
+	resultChan := make(chan []models.OrdersByDateResponse)
+	errChan := make(chan error)
 
-	orders, err := c.service.GetAllOrdersGroupedByDate(ctx.Request().Context())
-	if err != nil {
-		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to get order history by date")
+	go func() {
+		orders, err := c.service.GetAllOrdersGroupedByDate(ctx.Request().Context())
+		if err != nil {
+			errChan <- err
+			return
+		}
+		resultChan <- orders
+	}()
+
+	select {
+	case orders := <-resultChan:
+		return utils.SuccessResponse(ctx, http.StatusOK, orders)
+	case err := <-errChan:
+		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to get order history by date: "+err.Error())
 	}
-
-	return utils.SuccessResponse(ctx, http.StatusOK, orders)
 }
