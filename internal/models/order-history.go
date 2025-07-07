@@ -34,3 +34,7 @@ type OrderHistoryPagination struct {
 	Data 		[]OrderHistoryResponse 	`json:"data"`
 	MetaData 	any	 					`json:"metadata"`
 }
+type OrdersByDateResponse struct {
+    Date   string                	`json:"date"`
+    Orders []OrderHistoryResponse 	`json:"orders"`
+}

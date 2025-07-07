@@ -76,7 +76,7 @@ func (c *OrderHistoryController) Update(ctx echo.Context) error {
 		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to update order history")
 	}
 
-	return utils.SuccessResponse(ctx, http.StatusOK,  map[string]interface{}{"message": "Order history updated successfully"})
+	return utils.SuccessResponse(ctx, http.StatusOK, map[string]interface{}{"message": "Order history updated successfully"})
 }
 
 func (c *OrderHistoryController) Delete(ctx echo.Context) error {
@@ -90,4 +90,14 @@ func (c *OrderHistoryController) Delete(ctx echo.Context) error {
 	}
 
 	return utils.SuccessResponse(ctx, http.StatusOK, map[string]interface{}{"message": "Order history deleted successfully"})
+}
+
+func (c *OrderHistoryController) GetAllOrdersByDate(ctx echo.Context) error {
+
+	orders, err := c.service.GetAllOrdersGroupedByDate(ctx.Request().Context())
+	if err != nil {
+		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to get order history by date")
+	}
+
+	return utils.SuccessResponse(ctx, http.StatusOK, orders)
 }
